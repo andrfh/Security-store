@@ -1,0 +1,75 @@
+services:
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: secure_shop_nginx
+    restart: unless-stopped
+
+    depends_on:
+      - wordpress
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+
+    networks:
+      - frontend
+      - backend
+
+  wordpress:
+    image: wordpress:php8.2-fpm
+    container_name: secure_shop_wordpress
+    restart: unless-stopped
+
+    depends_on:
+      - mariadb
+      - redis
+
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+
+    volumes:
+      - ./wordpress:/var/www/html
+
+    networks:
+      - frontend
+      - backend
+
+  mariadb:
+    image: mariadb:11
+    container_name: secure_shop_db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    command: --default-authentication-plugin=mysql_native_password
+
+    volumes:
+      - ./db:/var/lib/mysql
+
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    container_name: secure_shop_redis
+    restart: unless-stopped
+
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
